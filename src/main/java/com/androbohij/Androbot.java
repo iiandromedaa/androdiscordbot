@@ -3,18 +3,23 @@ package com.androbohij;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 
+
 import org.apache.commons.lang3.StringUtils;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.Permission;
 
 public class Androbot extends ListenerAdapter {
 
@@ -37,7 +42,11 @@ public class Androbot extends ListenerAdapter {
             Commands.slash("transfer", "transfers tomilliens to another user's account")
                 .addOptions(new OptionData(OptionType.USER, "user", "who you're sending money to"))
                 .addOptions(new OptionData(OptionType.NUMBER, "amount", "amount of money to send")),
-            Commands.slash("close_acc", "close your account (all your money WILL be removed)")
+            Commands.slash("close_acc", "close your account (all your money WILL be removed)"),
+            Commands.slash("prune", "prunes messages")
+                .setGuildOnly(true)
+                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
+                .addOptions(new OptionData(OptionType.INTEGER, "number", "number of messages to prune (default 50)"))
         ).queue();
     }
 
@@ -54,11 +63,17 @@ public class Androbot extends ListenerAdapter {
                 openAcc(event);
                 break;
             case "transfer":
-                transfer(event);
+                User recipi = event.getOption("user", OptionMapping::getAsUser);
+                transfer(event, recipi);
                 break;
             case "close_acc":
                 closeAcc(event);
                 break;
+            case "prune":
+                prune(event);
+                break;
+            default:
+                event.reply("nuh uh").setEphemeral(true).queue();
         }
     }
 
@@ -86,8 +101,10 @@ public class Androbot extends ListenerAdapter {
                 return event.getHook().editOriginalFormat("pong: %d ms <:sanadepressed:1164768043294015530>", ping);
             else if (ping >= 350)
                 return event.getHook().editOriginalFormat("pong: %d ms <:sanadisappointed:1166238574061027338>", ping);
-            else if (ping >= 150)
+            else if (ping >= 200)
                 return event.getHook().editOriginalFormat("pong: %d ms <:sanahuh:1174119708023337010>", ping);
+            else if (ping >= 100)
+                return event.getHook().editOriginalFormat("pong: %d ms <:sanablep:1166253687899967488>", ping);
             else
                 return event.getHook().editOriginalFormat("pong: %d ms <:sanayippee:1166253600763293707>", ping);
         }).queue();
@@ -98,14 +115,18 @@ public class Androbot extends ListenerAdapter {
         event.reply("are you sure you want to open an account?").setEphemeral(true).queue();
     }
 
-    void transfer(SlashCommandInteractionEvent event) {
+    void transfer(SlashCommandInteractionEvent event, User recipi) {
         // TODO implement transfering
-        throw new UnsupportedOperationException("Unimplemented method 'openAcc'");
+        
     }
 
     void closeAcc(SlashCommandInteractionEvent event) {
         // TODO implement closing account
         throw new UnsupportedOperationException("Unimplemented method 'closeAcc'");
+    }
+
+    void prune(SlashCommandInteractionEvent event) {
+        
     }
 
     void msgToLog(MessageReceivedEvent event) {
