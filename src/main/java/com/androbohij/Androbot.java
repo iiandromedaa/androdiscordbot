@@ -61,7 +61,8 @@ public class Androbot extends ListenerAdapter {
                 .setGuildOnly(true)
                 .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
                 .addOptions(new OptionData(OptionType.INTEGER, "number", "number of messages to prune (default 50)")),
-            Commands.slash("get_snowflake", "prints out your discord id")
+            Commands.slash("get_snowflake", "prints out your discord id"),
+            Commands.slash("show_acc", "prints out your account details")
         ).queue();
     }
 
@@ -175,7 +176,7 @@ public class Androbot extends ListenerAdapter {
     void prune(SlashCommandInteractionEvent event) {
         OptionMapping amountOption = event.getOption("number"); // This is configured to be optional so check for null
         int amount;
-        
+
         if (amountOption == null)
             amount = 100;
         else
