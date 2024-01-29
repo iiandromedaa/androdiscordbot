@@ -7,6 +7,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -40,11 +41,17 @@ public class Teller {
         
     }
 
-    void getAccount(String snowflake) {
-
+    static Map<String, String> getAccount(String snowflake) {
+        for (Map<String, String> map : bank) {
+            if (map.containsKey(snowflake))
+                return map;
+        }
+        //empty map if we fucked up and cant find
+        return new HashMap<String,String>();
     }
 
-    void writeChanges() {
+    //writes to csv specifically
+    static void writeChanges() {
 
     }
 
