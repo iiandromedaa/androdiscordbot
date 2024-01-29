@@ -1,8 +1,7 @@
 package com.androbohij;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URLDecoder;
+import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 
@@ -29,17 +28,14 @@ import net.dv8tion.jda.api.Permission;
 
 public class Androbot extends ListenerAdapter {
 
-    public final String TOKEN = "";
+    public static final String TOKEN = "";
 
     public static void main(String[] args) throws IOException {
         String TOKEN = new Secrets().TOKEN;
-
-        String path = Androbot.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-        String decodedPath = URLDecoder.decode(path, "UTF-8");
-
-        Teller teller = new Teller(new File(decodedPath+"com/androbohij/cash.csv"));
-        teller.loadToMap();
-        System.out.println(teller.getMap());
+        InputStream csv = Androbot.class.getClassLoader().getResourceAsStream("cash.csv");
+        new Teller(csv);
+        Teller.loadToMap();
+        System.out.println(Teller.getMap());
 
         JDA jda = JDABuilder.createDefault(TOKEN, Collections.emptyList())
             .enableIntents(GatewayIntent.MESSAGE_CONTENT)
@@ -125,8 +121,21 @@ public class Androbot extends ListenerAdapter {
                     .takeAsync(amount)
                     .thenAccept(channel::purgeMessages);
                 // fallthrough delete the prompt message with our buttons
+                break;
+            case "yes_acc":
+                if (Teller.newAccount(event.getUser().getId()) != 0) {
+                    event.getHook().sendMessage("account creation fail <:sanadisappointed:1166238574061027338>").queue();
+                    event.getHook().deleteOriginal().queue();
+                    break;
+                } else {
+                    System.out.println(Teller.getMap());
+                    event.getHook().sendMessage("account creation success <:sanayippee:1166253600763293707>").queue();
+                    event.getHook().deleteOriginal().queue();
+                    break; 
+                }
             case "delete":
                 event.getHook().deleteOriginal().queue();
+                break;
         }
     }
 
@@ -157,14 +166,16 @@ public class Androbot extends ListenerAdapter {
 
     void openAcc(SlashCommandInteractionEvent event) {
         // TODO implement opening account
-        
-        event.reply("are you sure you want to open an account?").setEphemeral(true).queue();
+        event.reply("are you sure you want to open an account?")
+            .addActionRow(
+                Button.secondary(event.getUser().getId() + ":delete", "nah"),
+                Button.success(event.getUser().getId() + ":yes_acc", "ya")
+        ).queue();
         
     }
 
     void transfer(SlashCommandInteractionEvent event, User recipi) {
         // TODO implement transfering
-        
     }
 
     void closeAcc(SlashCommandInteractionEvent event) {
@@ -194,7 +205,7 @@ public class Androbot extends ListenerAdapter {
     }
 
     void getSnowflake(SlashCommandInteractionEvent event) {
-        event.reply(event.getInteraction().getMember().getId()).setEphemeral(true).queue();
+        event.reply(event.getUser().getId()).setEphemeral(true).queue();
     }
 
     void msgToLog(MessageReceivedEvent event) {

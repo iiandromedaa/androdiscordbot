@@ -1,33 +1,32 @@
 package com.androbohij;
-import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
 
 public class Teller {
 
-    private Reader input;
-    private FileWriter output;
-    private List<Map<String, String>> bank;
-    private CSVFormat format;
+    private static Reader input;
+    private static FileWriter output;
+    private static List<Map<String, String>> bank;
+    private static CSVFormat format;
 
-    Teller(File file) throws IOException {
-        input = new FileReader(file);
-        // output = new FileWriter(file);
+    Teller(InputStream file) throws IOException {
+        input = new InputStreamReader(file);
         format = CSVFormat.DEFAULT.builder().setHeader("snowflake", "tomilliens").setSkipHeaderRecord(true).build();
         bank = new ArrayList<>();
     }
 
-    void loadToMap() throws IOException {
+    static void loadToMap() throws IOException {
         Iterable<CSVRecord> records = format.parse(input);
         for (CSVRecord record : records) {
             String snowflake = record.get("snowflake");
@@ -36,19 +35,27 @@ public class Teller {
         }
     }
 
-    void newAccount(String snowflake) {
+    static int newAccount(String id) {
+        for (Map<String, String> hash : bank){
+            if (hash.containsValue(id))
+                return 1;
+        }
+        bank.add(new HashMap<String, String>() {{
+            put("snowflake", id);
+            put("tomilliens", "100");
+        }});
+        return 0;
+    }
+
+    static void getAccount(String snowflake) {
+
+    }
+
+    static void writeChanges() {
         
     }
 
-    void getAccount(String snowflake) {
-
-    }
-
-    void writeChanges() {
-
-    }
-
-    List<Map<String, String>> getMap() {
+    static List<Map<String, String>> getMap() {
         return bank;
     }
 
