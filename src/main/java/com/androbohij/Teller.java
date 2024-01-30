@@ -1,5 +1,5 @@
 package com.androbohij;
-
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,18 +16,12 @@ import org.apache.commons.csv.CSVRecord;
 
 public class Teller {
 
-    private static Reader input;
-    private static FileWriter output;
-    private static List<Map<String, String>> bank;
-    private static CSVFormat format;
-
-    Teller(InputStream file) throws IOException {
-        input = new InputStreamReader(file);
-        format = CSVFormat.DEFAULT.builder().setHeader("snowflake", "tomilliens").setSkipHeaderRecord(true).build();
-        bank = new ArrayList<>();
-    }
+    private static InputStream csv = Teller.class.getClassLoader().getResourceAsStream("cash.csv");
+    private static List<Map<String, String>> bank = new ArrayList<>();
+    private static CSVFormat format = CSVFormat.DEFAULT.builder().setHeader("snowflake", "tomilliens").setSkipHeaderRecord(true).build();
 
     static void loadToMap() throws IOException {
+        Reader input = new InputStreamReader(csv);
         Iterable<CSVRecord> records = format.parse(input);
         for (CSVRecord record : records) {
             String snowflake = record.get("snowflake");

@@ -33,7 +33,6 @@ public class Androbot extends ListenerAdapter {
     public static void main(String[] args) throws IOException {
         String TOKEN = new Secrets().TOKEN;
         InputStream csv = Androbot.class.getClassLoader().getResourceAsStream("cash.csv");
-        new Teller(csv);
         Teller.loadToMap();
         System.out.println(Teller.getMap());
 
