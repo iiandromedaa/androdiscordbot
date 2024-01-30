@@ -1,4 +1,5 @@
 package com.androbohij;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,7 +9,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
@@ -36,13 +36,12 @@ public class Teller {
         }
     }
 
-    static int newAccount(String id) {
-        for (Map<String, String> hash : bank){
-            if (hash.containsValue(id))
-                return 1;
-        }
+    //0 stands for 0K!!! :)
+    static int newAccount(String snowflake) {
+        if (!getAccount(snowflake).isEmpty())
+            return 1;
         bank.add(new HashMap<String, String>() {{
-            put("snowflake", id);
+            put("snowflake", snowflake);
             put("tomilliens", "100");
         }});
         return 0;
@@ -50,7 +49,7 @@ public class Teller {
 
     static Map<String, String> getAccount(String snowflake) {
         for (Map<String, String> map : bank) {
-            if (map.containsKey(snowflake))
+            if (map.containsValue(snowflake))
                 return map;
         }
         //empty map if we fucked up and cant find
