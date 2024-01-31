@@ -1,17 +1,16 @@
 package com.androbohij;
 
+import java.awt.Color;
 import java.io.IOException;
-import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 
-
 import org.apache.commons.lang3.StringUtils;
 
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -28,21 +27,19 @@ import net.dv8tion.jda.api.Permission;
 
 public class Androbot extends ListenerAdapter {
 
-    public static final String TOKEN = "";
+    public static final String TOKEN = new Secrets().TOKEN;
 
-    public static void main(String[] args) throws IOException {
-        String TOKEN = new Secrets().TOKEN;
-        InputStream csv = Androbot.class.getClassLoader().getResourceAsStream("cash.csv");
-        Teller.loadToMap();
-        System.out.println(Teller.getMap());
-
-        JDA jda = JDABuilder.createDefault(TOKEN, Collections.emptyList())
+    static JDA jda = JDABuilder.createDefault(TOKEN, Collections.emptyList())
             .enableIntents(GatewayIntent.MESSAGE_CONTENT)
             .enableIntents(GatewayIntent.GUILD_MESSAGES)
             .enableIntents(GatewayIntent.GUILD_EMOJIS_AND_STICKERS)
             .addEventListeners(new Androbot())
             .setActivity(Activity.customStatus("Crunching numbers"))
             .build();
+            
+    public static void main(String[] args) throws IOException {
+        Teller.loadToMap();
+        System.out.println(Teller.getMap());
 
         jda.updateCommands().addCommands(
             Commands.slash("ping", "gets ping"),
@@ -74,8 +71,7 @@ public class Androbot extends ListenerAdapter {
                 openAcc(event);
                 break;
             case "transfer":
-                User recipi = event.getOption("user", OptionMapping::getAsUser);
-                transfer(event, recipi);
+                transfer(event);
                 break;
             case "close_acc":
                 closeAcc(event);
@@ -86,12 +82,15 @@ public class Androbot extends ListenerAdapter {
             case "get_snowflake":
                 getSnowflake(event);
                 break;
+            case "show_acc":
+                showAcc(event);
+                break;
             default:
                 event.reply("nuh uh").setEphemeral(true).queue();
         }
     }
 
-    @Override
+	@Override
     public void onMessageReceived(MessageReceivedEvent event) {
         if (event.getAuthor().isBot()) 
             return;
@@ -109,28 +108,51 @@ public class Androbot extends ListenerAdapter {
         if (!authorId.equals(event.getUser().getId()))
             return;
         event.deferEdit().queue(); // acknowledge the button was clicked, otherwise the interaction will fail
- 
         MessageChannel channel = event.getChannel();
-        switch (type)
-        {
+        switch (type) {
             case "prune":
                 int amount = Integer.parseInt(id[2]);
                 event.getChannel().getIterableHistory()
                     .skipTo(event.getMessageIdLong())
                     .takeAsync(amount)
                     .thenAccept(channel::purgeMessages);
-                // fallthrough delete the prompt message with our buttons
+                event.getHook().deleteOriginal().queue();
                 break;
             case "yes_acc":
-                if (Teller.newAccount(event.getUser().getId()) != 0) {
-                    event.getHook().sendMessage("account creation fail <:sanadisappointed:1166238574061027338>").queue();
+                if (Teller.newAccount(event.getUser().getId(), event.getUser().getName()) != 0) {
+                    event.getHook().sendMessage("account creation fail (you already have an account) <:sanadisappointed:1166238574061027338>").setEphemeral(true).queue();
                     event.getHook().deleteOriginal().queue();
                     break;
                 } else {
                     System.out.println(Teller.getMap());
-                    event.getHook().sendMessage("account creation success <:sanayippee:1166253600763293707>").queue();
+                    event.getHook().sendMessage("account creation success <:sanayippee:1166253600763293707>").setEphemeral(true).queue();
                     event.getHook().deleteOriginal().queue();
                     break; 
+                }
+            case "del_acc":
+                if (Teller.getAccount(event.getUser().getId()).isEmpty()) {
+                    event.getHook().sendMessage("account creation fail (you dont have an account) <:sanadisappointed:1166238574061027338>").setEphemeral(true).queue();
+                    event.getHook().deleteOriginal().queue();
+                    break;
+                } else {
+                    Teller.deleteAccount(event.getUser().getId());
+                    event.getHook().sendMessage("account deletion succeeded <:sanadisappointed:1166238574061027338>").setEphemeral(true).queue();
+                    event.getHook().deleteOriginal().queue();
+                    System.out.println(Teller.getMap());
+                    break;
+                }
+            case "yes_trade":
+                if (Teller.getAccount(event.getUser().getId()).isEmpty() | Double.parseDouble(Teller.getAccount(event.getUser().getId()).get("tomilliens")) < Double.parseDouble(id[3])) {
+                    event.getHook().sendMessage("transfer failed (you dont have an account or dont have enough money) <:sanadisappointed:1166238574061027338>").setEphemeral(true).queue();
+                    event.getHook().deleteOriginal().queue();
+                    break;
+                } else {
+                    Teller.transfer(event.getUser().getId(), id[2], Double.parseDouble(id[3]));
+                    event.getHook().sendMessage("transfer succeeded <:sanayippee:1166253600763293707>").setEphemeral(true).queue();
+                    event.getHook().deleteOriginal().queue();
+                    jda.openPrivateChannelById(id[2]).flatMap(chanl -> chanl.sendMessage(event.getUser().getName() + " has sent you " + id[3] + " tomilliens")).queue();
+                    System.out.println(Teller.getMap());
+                    break;
                 }
             case "delete":
                 event.getHook().deleteOriginal().queue();
@@ -164,22 +186,42 @@ public class Androbot extends ListenerAdapter {
     }
 
     void openAcc(SlashCommandInteractionEvent event) {
-        // TODO implement opening account
-        event.reply("are you sure you want to open an account?")
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle("account action");
+        eb.setDescription("are you sure you wanna open an account?");
+        eb.setColor(new Color(255, 255, 255));
+        event.replyEmbeds(eb.build())
             .addActionRow(
                 Button.secondary(event.getUser().getId() + ":delete", "nah"),
                 Button.success(event.getUser().getId() + ":yes_acc", "ya")
-        ).queue();
+        ).setEphemeral(true).queue();
         
     }
 
-    void transfer(SlashCommandInteractionEvent event, User recipi) {
-        // TODO implement transfering
+    void transfer(SlashCommandInteractionEvent event) {
+        OptionMapping recipiOption = event.getOption("user");
+        OptionMapping amountOption = event.getOption("amount");
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle("account action");
+        eb.setDescription("are you sure you wanna transfer?");
+        eb.setColor(new Color(255, 210, 87));
+        event.replyEmbeds(eb.build())
+            .addActionRow(
+                Button.secondary(event.getUser().getId() + ":delete", "nah"),
+                Button.success(event.getUser().getId() + ":yes_trade:" + recipiOption.getAsUser().getId() + ":" + amountOption.getAsDouble(), "ya")
+        ).setEphemeral(true).queue();
     }
 
     void closeAcc(SlashCommandInteractionEvent event) {
-        // TODO implement closing account
-        throw new UnsupportedOperationException("Unimplemented method 'closeAcc'");
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle("account action");
+        eb.setDescription("are you *sure* you want to delete ur account?");
+        eb.setColor(new Color(255, 0, 0));
+        event.replyEmbeds(eb.build())
+            .addActionRow(
+                Button.secondary(event.getUser().getId() + ":delete", "nah"),
+                Button.success(event.getUser().getId() + ":del_acc", "ya")
+        ).setEphemeral(true).queue();
     }
 
     //taken straight from the JDA examples so i can figure out how any of this works
@@ -206,6 +248,16 @@ public class Androbot extends ListenerAdapter {
     void getSnowflake(SlashCommandInteractionEvent event) {
         event.reply(event.getUser().getId()).setEphemeral(true).queue();
     }
+
+    void showAcc(SlashCommandInteractionEvent event) {
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle("account overview");
+        eb.setThumbnail(event.getUser().getAvatarUrl());
+        eb.setColor(new Color(255, 210, 87));
+        eb.addField("name", Teller.getAccount(event.getUser().getId()).get("username"), false);
+        eb.addField("tomilliens", Teller.getAccount(event.getUser().getId()).get("tomilliens"), false);
+		event.replyEmbeds(eb.build()).queue();
+	}
 
     void msgToLog(MessageReceivedEvent event) {
         System.out.println(event.getMessage().getTimeCreated().format(DateTimeFormatter.RFC_1123_DATE_TIME)
