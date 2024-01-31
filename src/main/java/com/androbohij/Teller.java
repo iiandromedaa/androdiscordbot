@@ -1,10 +1,12 @@
 package com.androbohij;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,18 +18,19 @@ import org.apache.commons.csv.CSVRecord;
 
 public class Teller {
 
-    private static InputStream csv = Teller.class.getClassLoader().getResourceAsStream("cash.csv");
+    private static URL csvUrl = Teller.class.getClassLoader().getResource("cash.csv");
     private static List<Map<String, String>> bank = new ArrayList<>();
     private static CSVFormat format = CSVFormat.DEFAULT.builder().setHeader("snowflake", "tomilliens").setSkipHeaderRecord(true).build();
 
     static void loadToMap() throws IOException {
-        Reader input = new InputStreamReader(csv);
+        Reader input = new InputStreamReader(csvUrl.openStream());
         Iterable<CSVRecord> records = format.parse(input);
         for (CSVRecord record : records) {
             String snowflake = record.get("snowflake");
             String cash = record.get("tomilliens");
             bank.add(record.toMap());
         }
+        input.close();
     }
 
     //0 stands for 0K!!! :)
@@ -52,7 +55,7 @@ public class Teller {
 
     //writes to csv specifically
     static void writeChanges() {
-
+        FileWriter output = new FileWriter();
     }
 
     static List<Map<String, String>> getMap() {
